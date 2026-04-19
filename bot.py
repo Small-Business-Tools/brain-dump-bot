@@ -11,6 +11,7 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
+logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 ALLOWED_USER_ID = int(os.environ.get("ALLOWED_USER_ID", 0))
