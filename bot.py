@@ -110,8 +110,18 @@ def schedule_weekly_digest(app):
 
 
 def main():
-    token = os.environ["TELEGRAM_BOT_TOKEN"]
+    import sys
+    print("Starting bot...", flush=True)
+    token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    if not token:
+        print("ERROR: TELEGRAM_BOT_TOKEN not set", flush=True)
+        sys.exit(1)
+    print(f"Token found, length: {len(token)}", flush=True)
+    print(f"ALLOWED_USER_ID: {os.environ.get('ALLOWED_USER_ID')}", flush=True)
+    print(f"DB_PATH: {os.environ.get('DB_PATH')}", flush=True)
+    
     init_db()
+    print("Database initialised", flush=True)
 
     app = ApplicationBuilder().token(token).build()
 
@@ -123,9 +133,5 @@ def main():
 
     schedule_weekly_digest(app)
 
-    logger.info("Bot started.")
+    print("Bot started.", flush=True)
     app.run_polling(drop_pending_updates=True)
-
-
-if __name__ == "__main__":
-    main()
