@@ -17,8 +17,7 @@ logging.basicConfig(
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
-# Temporarily set to 0 to disable auth check for testing
-ALLOWED_USER_ID = 0
+ALLOWED_USER_ID = int(os.environ.get("ALLOWED_USER_ID", 0))
 
 
 def is_authorised(update: Update) -> bool:
