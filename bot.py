@@ -7,6 +7,8 @@ import os
 import datetime
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+from aiohttp import web
+import asyncio
 
 from claude_client import process_idea
 from store import init_db
@@ -20,6 +22,8 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 ALLOWED_USER_ID = int(os.environ.get("ALLOWED_USER_ID", 0))
+WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "")
+PORT = int(os.environ.get("PORT", 8080))
 
 
 def is_authorised(update: Update) -> bool:
@@ -113,6 +117,61 @@ async def backup_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(result)
 
 
+# --- Siri webhook endpoint ---
+
+async def webhook_handler(request: web.Request) -> web.Response:
+    """Accepts incoming idea from Siri Shortcut via POST request."""
+    try:
+        secret = request.headers.get("X-Secret", "")
+        if WEBHOOK_SECRET and secret != WEBHOOK_SECRET:
+            logger.warning("Webhook request with invalid secret")
+            return web.Response(status=401, text="Unauthorised")
+
+        data = await request.json()
+        text = data.get("idea", "").strip()
+
+        if not text:
+            return web.Response(status=400, text="No idea text provided")
+
+        logger.info(f"Webhook received idea: {text[:50]}...")
+
+        # Process in background so we can return quickly to Siri
+        asyncio.create_task(handle_webhook_idea(text, request.app["bot"]))
+
+        return web.Response(status=200, text="Idea received — processing now.")
+
+    except Exception as e:
+        logger.error(f"Webhook error: {e}")
+        return web.Response(status=500, text="Internal error")
+
+
+async def handle_webhook_idea(text: str, bot):
+    """Process the idea and send Telegram confirmation."""
+    try:
+        reply = await process_idea(text)
+        if ALLOWED_USER_ID:
+            await bot.send_message(
+                chat_id=ALLOWED_USER_ID,
+                text=f"📱 *Via Siri:*\n{reply}",
+                parse_mode="Markdown"
+            )
+    except Exception as e:
+        logger.error(f"Webhook idea processing error: {e}")
+        if ALLOWED_USER_ID:
+            await bot.send_message(
+                chat_id=ALLOWED_USER_ID,
+                text="Siri idea was saved but couldn't be processed right now. Check /list."
+            )
+
+
+def create_web_app(bot) -> web.Application:
+    app = web.Application()
+    app["bot"] = bot
+    app.router.add_post("/idea", webhook_handler)
+    app.router.add_get("/health", lambda r: web.Response(text="OK"))
+    return app
+
+
 def schedule_jobs(app):
     job_queue = app.job_queue
 
@@ -154,9 +213,24 @@ def main():
 
     schedule_jobs(app)
 
-    print("Bot started.", flush=True)
-    logger.info("Bot started.")
-    app.run_polling(drop_pending_updates=True)
+    # Start the web server alongside the bot
+    web_app = create_web_app(app.bot)
+    runner = web.AppRunner(web_app)
+
+    async def run():
+        await runner.setup()
+        site = web.TCPSite(runner, "0.0.0.0", PORT)
+        await site.start()
+        print(f"Webhook server running on port {PORT}", flush=True)
+        print("Bot started.", flush=True)
+        logger.info("Bot started.")
+        await app.initialize()
+        await app.start()
+        await app.updater.start_polling(drop_pending_updates=True)
+        # Keep running
+        await asyncio.Event().wait()
+
+    asyncio.run(run())
 
 
 if __name__ == "__main__":
