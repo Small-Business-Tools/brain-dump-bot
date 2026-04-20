@@ -44,6 +44,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     await start(update, context)
 
+async def myid(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(f"Your Telegram user ID is: `{update.effective_user.id}`", parse_mode="Markdown")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_authorised(update):
