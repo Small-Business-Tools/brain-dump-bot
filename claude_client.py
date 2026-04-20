@@ -14,22 +14,65 @@ logger = logging.getLogger(__name__)
 client = AsyncAnthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 MODEL = "claude-opus-4-5"
 
+FALLBACK_CLUSTER_NAME = "Unprocessed ideas"
+FALLBACK_CLUSTER_SUMMARY = "Ideas saved but not yet processed due to an error."
+
+
+async def get_or_create_fallback_cluster() -> int:
+    """Return the ID of the fallback cluster, creating it if needed."""
+    clusters = get_all_clusters()
+    for c in clusters:
+        if c["name"] == FALLBACK_CLUSTER_NAME:
+            return c["id"]
+    return save_cluster(FALLBACK_CLUSTER_NAME, FALLBACK_CLUSTER_SUMMARY, ["unprocessed"])
+
 
 async def process_idea(raw_text: str) -> str:
     """
-    Full pipeline for a new incoming idea:
-    1. Save the raw entry
-    2. Ask Claude to categorise and match to existing clusters
-    3. Update or create the cluster
-    4. Recalculate scores
-    5. Return a confirmation message with cross-links
+    Full pipeline for a new incoming idea.
+    If anything fails, the raw entry is saved to a fallback cluster
+    so no idea is ever lost.
     """
     entry_id = save_entry(raw_text)
+
+    try:
+        return await _process_with_claude(raw_text, entry_id)
+    except json.JSONDecodeError as e:
+        logger.error(f"Claude returned invalid JSON: {e}")
+        await _save_to_fallback(entry_id)
+        return (
+            "Your idea was saved, but I had trouble processing it right now "
+            "(Claude returned an unexpected response). It's in your *Unprocessed ideas* "
+            "cluster — send /list to see it."
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error processing idea: {e}")
+        await _save_to_fallback(entry_id)
+        return (
+            "Your idea was saved, but something went wrong processing it "
+            f"(`{type(e).__name__}`). It's in your *Unprocessed ideas* cluster — "
+            "send /list to see it."
+        )
+
+
+async def _save_to_fallback(entry_id: int):
+    """Link a failed entry to the fallback cluster."""
+    try:
+        cluster_id = await get_or_create_fallback_cluster()
+        link_entry_to_cluster(cluster_id, entry_id)
+    except Exception as e:
+        logger.error(f"Failed to save to fallback cluster: {e}")
+
+
+async def _process_with_claude(raw_text: str, entry_id: int) -> str:
+    """Call Claude, parse response, update store, return confirmation message."""
     existing = get_all_clusters()
 
     cluster_summary = "\n".join(
-        f"- ID {c['id']}: {c['name']} — {c['summary']}" for c in existing
-    ) if existing else "None yet."
+        f"- ID {c['id']}: {c['name']} — {c['summary']}"
+        for c in existing
+        if c["name"] != FALLBACK_CLUSTER_NAME
+    ) or "None yet."
 
     prompt = f"""You are managing a personal idea repository. A new idea has just arrived.
 
@@ -50,7 +93,7 @@ Your job:
    - effort: invert this — 100 means very low effort to build, 0 means enormous effort
    - novelty: how unique vs the existing clusters and general market
 
-Return ONLY valid JSON in this exact shape:
+Return ONLY valid JSON in this exact shape, with no markdown or code fences:
 {{
   "action": "add_to_existing" | "create_new",
   "cluster_id": <int or null>,
@@ -74,14 +117,20 @@ Return ONLY valid JSON in this exact shape:
 
     raw = response.content[0].text.strip()
 
-    # Strip markdown code fences if present
+    # Strip markdown code fences if Claude includes them despite instructions
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
             raw = raw[4:]
     raw = raw.strip()
 
-    result = json.loads(raw)
+    result = json.loads(raw)  # raises JSONDecodeError if malformed — caught upstream
+
+    # Validate required fields are present
+    required = ["action", "cluster_name", "cluster_summary", "tags", "scores", "confirmation_note"]
+    missing = [f for f in required if f not in result]
+    if missing:
+        raise ValueError(f"Claude response missing fields: {missing}")
 
     # Persist cluster
     if result["action"] == "add_to_existing" and result.get("cluster_id"):
@@ -116,7 +165,8 @@ Return ONLY valid JSON in this exact shape:
 
     if result.get("cross_links"):
         linked_names = [
-            c["name"] for c in existing if c["id"] in result["cross_links"]
+            c["name"] for c in existing
+            if c["id"] in result["cross_links"]
         ]
         if linked_names:
             reply_lines.append(f"Connects to: {', '.join(linked_names)}")
