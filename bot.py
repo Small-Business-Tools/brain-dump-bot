@@ -1,10 +1,10 @@
 from backup import run_backup
-
 import sys
 sys.stdout.reconfigure(line_buffering=True)
 
 import logging
 import os
+import datetime
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
@@ -37,6 +37,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Commands:\n"
         "/digest — get your top ideas right now\n"
         "/list — show all idea clusters\n"
+        "/backup — back up your database to GitHub now\n"
         "/help — show this message"
     )
 
@@ -103,17 +104,32 @@ async def digest_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Couldn't build digest right now.")
 
 
-def schedule_weekly_digest(app):
-    import datetime
+async def backup_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_authorised(update):
+        return
+    await update.message.reply_text("Starting backup...")
+    from backup import backup_database
+    result = await backup_database()
+    await update.message.reply_text(result)
+
+
+def schedule_jobs(app):
     job_queue = app.job_queue
+
+    # Weekly digest every Sunday at 09:00 UTC
     job_queue.run_daily(
-        lambda ctx: ctx.bot.send_message(
-            chat_id=int(os.environ.get("ALLOWED_USER_ID", 0)),
-            text="Building your weekly digest...",
-        ),
+        run_backup,
         time=datetime.time(9, 0, 0),
         days=(6,),
         name="weekly_digest"
+    )
+
+    # Daily backup at 03:00 UTC
+    job_queue.run_daily(
+        run_backup,
+        time=datetime.time(3, 0, 0),
+        days=(0, 1, 2, 3, 4, 5, 6),
+        name="daily_backup"
     )
 
 
@@ -133,9 +149,10 @@ def main():
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("list", list_ideas))
     app.add_handler(CommandHandler("digest", digest_command))
+    app.add_handler(CommandHandler("backup", backup_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    schedule_weekly_digest(app)
+    schedule_jobs(app)
 
     print("Bot started.", flush=True)
     logger.info("Bot started.")
