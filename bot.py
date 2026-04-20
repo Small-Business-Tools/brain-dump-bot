@@ -17,7 +17,7 @@ logging.basicConfig(
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
-ALLOWED_USER_ID = int(os.environ.get("ALLOWED_USER_ID", 0))
+ALLOWED_USER_ID = 0
 
 
 def is_authorised(update: Update) -> bool:
@@ -134,7 +134,8 @@ def main():
     app.add_handler(CommandHandler("list", list_ideas))
     app.add_handler(CommandHandler("digest", digest_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
+    app.add_handler(CommandHandler("myid", myid))
+    
     schedule_weekly_digest(app)
 
     print("Bot started.", flush=True)
