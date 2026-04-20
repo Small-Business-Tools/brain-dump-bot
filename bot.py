@@ -1,3 +1,5 @@
+from backup import run_backup
+
 import sys
 sys.stdout.reconfigure(line_buffering=True)
 
