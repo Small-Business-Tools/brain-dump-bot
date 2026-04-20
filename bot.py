@@ -17,12 +17,12 @@ logging.basicConfig(
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
-ALLOWED_USER_ID = 0
+ALLOWED_USER_ID = int(os.environ.get("ALLOWED_USER_ID", 0))
 
 
 def is_authorised(update: Update) -> bool:
     if ALLOWED_USER_ID == 0:
-        return True  # auth disabled for testing
+        return True
     return update.effective_user.id == ALLOWED_USER_ID
 
 
@@ -44,8 +44,6 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     await start(update, context)
 
-async def myid(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(f"Your Telegram user ID is: `{update.effective_user.id}`", parse_mode="Markdown")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_authorised(update):
@@ -134,8 +132,7 @@ def main():
     app.add_handler(CommandHandler("list", list_ideas))
     app.add_handler(CommandHandler("digest", digest_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.add_handler(CommandHandler("myid", myid))
-    
+
     schedule_weekly_digest(app)
 
     print("Bot started.", flush=True)
