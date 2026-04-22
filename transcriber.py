@@ -7,7 +7,11 @@ logger = logging.getLogger(__name__)
 
 
 def _get_client() -> AsyncOpenAI:
-    return AsyncOpenAI(api_key=os.environ["OPENAI_API_KEY"])
+    key = os.environ.get("OPENAI_API_KEY")
+    if not key:
+        logger.error("OPENAI_API_KEY is not set in environment variables")
+        raise ValueError("OPENAI_API_KEY missing")
+    return AsyncOpenAI(api_key=key)
 
 
 async def transcribe_voice(file_bytes: bytes, mime_type: str = "audio/ogg") -> str | None:
