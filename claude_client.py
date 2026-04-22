@@ -1,160 +1,65 @@
-import os
 import json
-import logging
-import asyncio
-from anthropic import AsyncAnthropic, APIStatusError, APIConnectionError, APITimeoutError
-
+import os
+from anthropic import AsyncAnthropic
 from store import (
-    save_entry, save_cluster, update_cluster,
-    link_entry_to_cluster, get_all_clusters,
-    get_cluster_entries, save_scores
+    save_entry,
+    save_cluster,
+    update_cluster,
+    get_all_clusters,
+    get_cluster_by_id,
+    link_entry_to_cluster,
+    get_cluster_entries,
+    get_or_create_fallback_cluster,
+    save_cluster_link,
+    get_cluster_links,
 )
 from scorer import calculate_scores
+from store import save_scores
 
-logger = logging.getLogger(__name__)
+MODEL = "claude-opus-4-5"
 client = AsyncAnthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
-MODEL = "claude-sonnet-4-6"
-MAX_TOKENS = 1200
-MAX_RETRIES = 3
-RETRY_DELAY = 2  # seconds between retries
-
-FALLBACK_CLUSTER_NAME = "Unprocessed ideas"
-FALLBACK_CLUSTER_SUMMARY = "Ideas saved but not yet processed due to an error."
-
-
-# ---------------------------------------------------------------------------
-# Fallback cluster
-# ---------------------------------------------------------------------------
-
-async def get_or_create_fallback_cluster() -> int:
-    """Return the ID of the fallback cluster, creating it if needed."""
-    clusters = get_all_clusters()
-    for c in clusters:
-        if c["name"] == FALLBACK_CLUSTER_NAME:
-            return c["id"]
-    return save_cluster(FALLBACK_CLUSTER_NAME, FALLBACK_CLUSTER_SUMMARY, ["unprocessed"])
-
-
-async def _save_to_fallback(entry_id: int):
-    """Link a failed entry to the fallback cluster. Never raises."""
-    try:
-        cluster_id = await get_or_create_fallback_cluster()
-        link_entry_to_cluster(cluster_id, entry_id)
-    except Exception as e:
-        logger.error(f"Failed to save entry {entry_id} to fallback cluster: {e}")
-
-
-# ---------------------------------------------------------------------------
-# Public entry point
-# ---------------------------------------------------------------------------
 
 async def process_idea(raw_text: str) -> str:
     """
-    Full pipeline for a new incoming idea.
+    Full pipeline for a new idea:
+      1. Save the raw entry immediately (never lost).
+      2. Ask Claude to categorise, score, and find cross-links.
+      3. Persist cluster + links.
+      4. Build and return a Telegram reply.
 
-    1. Save the raw entry immediately — no idea is ever lost.
-    2. Call Claude with retry logic for transient API errors.
-    3. On any failure, move the entry to the fallback cluster and
-       return a clear message to the user.
+    Any failure after step 1 routes to the fallback cluster so nothing is lost.
     """
     entry_id = save_entry(raw_text)
 
     try:
-        return await _process_with_retries(raw_text, entry_id)
-
+        return await _process_with_claude(raw_text, entry_id)
     except json.JSONDecodeError as e:
-        logger.error(f"Claude returned invalid JSON after all retries: {e}")
         await _save_to_fallback(entry_id)
         return (
-            "✓ Your idea was saved, but I couldn't process it right now "
-            "(Claude returned an unexpected response). "
-            "It's in your *Unprocessed ideas* cluster — send /list to see it."
+            "⚠️ Idea saved, but Claude returned malformed JSON — check logs.\n"
+            f"_Error: {e}_"
         )
-
     except ValueError as e:
-        logger.error(f"Claude response failed validation: {e}")
         await _save_to_fallback(entry_id)
-        return (
-            "✓ Your idea was saved, but the response from Claude was incomplete. "
-            "It's in your *Unprocessed ideas* cluster — send /list to see it."
-        )
-
-    except (APIStatusError, APIConnectionError, APITimeoutError) as e:
-        logger.error(f"Anthropic API error after all retries: {e}")
-        await _save_to_fallback(entry_id)
-        return (
-            "✓ Your idea was saved, but the AI service is currently unavailable. "
-            "It's in your *Unprocessed ideas* cluster and will need manual reprocessing."
-        )
-
+        return f"⚠️ Idea saved, but response was missing fields.\n_Error: {e}_"
     except Exception as e:
-        logger.error(f"Unexpected error processing idea (entry {entry_id}): {type(e).__name__}: {e}")
         await _save_to_fallback(entry_id)
-        return (
-            "✓ Your idea was saved, but something unexpected went wrong processing it. "
-            "It's in your *Unprocessed ideas* cluster — send /list to see it."
-        )
+        return f"⚠️ Idea saved, but something went wrong.\n_Error: {type(e).__name__}: {e}_"
 
 
-# ---------------------------------------------------------------------------
-# Retry wrapper
-# ---------------------------------------------------------------------------
+async def _save_to_fallback(entry_id: int):
+    fallback_id = get_or_create_fallback_cluster()
+    link_entry_to_cluster(fallback_id, entry_id)
 
-async def _process_with_retries(raw_text: str, entry_id: int) -> str:
-    """
-    Attempt _process_with_claude up to MAX_RETRIES times.
-    Retries only on transient API errors; raises immediately for logic errors.
-    """
-    last_error = None
-
-    for attempt in range(1, MAX_RETRIES + 1):
-        try:
-            return await _process_with_claude(raw_text, entry_id)
-
-        except (APIConnectionError, APITimeoutError) as e:
-            last_error = e
-            if attempt < MAX_RETRIES:
-                wait = RETRY_DELAY * attempt
-                logger.warning(f"Transient API error on attempt {attempt}/{MAX_RETRIES}, retrying in {wait}s: {e}")
-                await asyncio.sleep(wait)
-            else:
-                logger.error(f"All {MAX_RETRIES} attempts failed with transient error.")
-
-        except APIStatusError as e:
-            # 5xx = transient; 4xx = our fault, don't retry
-            if e.status_code >= 500:
-                last_error = e
-                if attempt < MAX_RETRIES:
-                    wait = RETRY_DELAY * attempt
-                    logger.warning(f"API 5xx on attempt {attempt}/{MAX_RETRIES}, retrying in {wait}s: {e}")
-                    await asyncio.sleep(wait)
-                else:
-                    logger.error(f"All {MAX_RETRIES} attempts failed with 5xx.")
-            else:
-                raise  # 4xx — raise immediately, no point retrying
-
-        except (json.JSONDecodeError, ValueError):
-            raise  # Logic errors — raise immediately to outer handler
-
-    raise last_error
-
-
-# ---------------------------------------------------------------------------
-# Core Claude call
-# ---------------------------------------------------------------------------
 
 async def _process_with_claude(raw_text: str, entry_id: int) -> str:
-    """Call Claude, parse and validate the response, update the store, return reply."""
-
     existing = get_all_clusters()
-    active_clusters = [c for c in existing if c["name"] != FALLBACK_CLUSTER_NAME]
-    valid_cluster_ids = {c["id"] for c in active_clusters}
 
     cluster_summary = "\n".join(
-        f"- ID {c['id']}: {c['name']} — {c['summary']}"
-        for c in active_clusters
-    ) or "None yet."
+        f"[ID {c['id']}] {c['name']}: {c['summary']} (tags: {', '.join(c['tags'])})"
+        for c in existing
+    ) if existing else "None yet."
 
     prompt = f"""You are managing a personal idea repository. A new idea has just arrived.
 
@@ -165,102 +70,135 @@ Existing idea clusters:
 {cluster_summary}
 
 Your job:
-1. Decide if this idea belongs to an existing cluster (same theme, compatible, or an extension of one).
-2. If yes, return the cluster ID to attach it to, and an updated summary.
-3. If no, create a new cluster with a short name and summary.
-4. Extract 2-4 tags (single words or short phrases).
-5. Note any cross-links to OTHER clusters this idea connects to (not the one it belongs to).
-6. Score the idea cluster on these dimensions (0-100):
+1. Decide if this idea belongs to an existing cluster (same theme, compatible, or an extension).
+   - If yes: return that cluster's ID and an updated summary.
+   - If no: create a new cluster with a short name and one-sentence summary.
+2. Extract 2-4 tags (single words or short phrases).
+3. Identify any CROSS-LINKS — other clusters (NOT the one this idea belongs to) that this
+   idea meaningfully connects to. For each cross-link provide:
+   - The cluster ID
+   - A short reason (one sentence) explaining WHY they are connected. This will be shown
+     directly to the user, so make it specific and insightful, not generic.
+4. Score the idea cluster on these dimensions (0–100):
    - revenue_fit: how clearly a monetisation path exists
-   - effort: invert this — 100 means very low effort to build, 0 means enormous effort
-   - novelty: how unique vs the existing clusters and general market
+   - effort: inverted — 100 = very low effort, 0 = enormous effort
+   - novelty: how unique vs existing clusters and the general market
 
-Return ONLY valid JSON in this exact shape, with no markdown or code fences:
+Return ONLY valid JSON in this exact shape — no markdown, no prose:
 {{
   "action": "add_to_existing" | "create_new",
   "cluster_id": <int or null>,
   "cluster_name": "<string>",
   "cluster_summary": "<one sentence>",
   "tags": ["tag1", "tag2"],
-  "cross_links": [<cluster_id>, ...],
+  "cross_links": [
+    {{"cluster_id": <int>, "reason": "<one sentence>"}}
+  ],
   "scores": {{
     "revenue_fit": <0-100>,
     "effort": <0-100>,
     "novelty": <0-100>
   }},
   "confirmation_note": "<one friendly sentence to send back to the user>"
-}}"""
+}}
+
+cross_links may be an empty list [] if there are no meaningful connections.
+"""
 
     response = await client.messages.create(
         model=MODEL,
-        max_tokens=MAX_TOKENS,
+        max_tokens=1000,
         messages=[{"role": "user", "content": prompt}]
     )
 
     raw = response.content[0].text.strip()
 
-    # Strip markdown code fences if Claude includes them despite instructions
+    # Strip markdown fences if Claude wraps the JSON anyway
     if raw.startswith("```"):
-        raw = raw.split("```", 2)[1]
+        raw = raw.split("```")[1]
         if raw.startswith("json"):
             raw = raw[4:]
     raw = raw.strip()
 
-    result = json.loads(raw)  # raises JSONDecodeError if malformed — caught upstream
+    result = json.loads(raw)
 
-    # Validate required fields
     required = ["action", "cluster_name", "cluster_summary", "tags", "scores", "confirmation_note"]
     missing = [f for f in required if f not in result]
     if missing:
-        raise ValueError(f"Claude response missing required fields: {missing}")
+        raise ValueError(f"Claude response missing fields: {missing}")
 
-    # Validate scores shape
-    score_fields = ["revenue_fit", "effort", "novelty"]
-    missing_scores = [f for f in score_fields if f not in result.get("scores", {})]
-    if missing_scores:
-        raise ValueError(f"Claude response missing score fields: {missing_scores}")
-
-    # Sanitise cross_links — drop any IDs that don't exist
-    raw_cross_links = result.get("cross_links") or []
-    cross_links = [cid for cid in raw_cross_links if cid in valid_cluster_ids]
-
-    # Persist cluster
-    if result["action"] == "add_to_existing" and result.get("cluster_id") in valid_cluster_ids:
-        cluster_id = result["cluster_id"]
-        update_cluster(
-            cluster_id,
-            result["cluster_name"],
-            result["cluster_summary"],
-            result["tags"]
-        )
+    # ── Persist cluster ──────────────────────────────────────────────────────
+    if result["action"] == "add_to_existing" and result.get("cluster_id"):
+        cluster_id = int(result["cluster_id"])
+        update_cluster(cluster_id, result["cluster_name"], result["cluster_summary"], result["tags"])
     else:
-        cluster_id = save_cluster(
-            result["cluster_name"],
-            result["cluster_summary"],
-            result["tags"]
-        )
+        cluster_id = save_cluster(result["cluster_name"], result["cluster_summary"], result["tags"])
 
     link_entry_to_cluster(cluster_id, entry_id)
 
-    # Recalculate density + full score
+    # ── Recalculate density + full score ─────────────────────────────────────
     entries = get_cluster_entries(cluster_id)
     scores = calculate_scores(entries, result["scores"])
     save_scores(cluster_id, scores)
 
-    # Build reply
-    reply_lines = [
+    # ── Persist cross-links ──────────────────────────────────────────────────
+    raw_links = result.get("cross_links", [])
+
+    # Support both old list-of-ints format and new list-of-objects format
+    normalised_links = []
+    for item in raw_links:
+        if isinstance(item, int):
+            normalised_links.append({"cluster_id": item, "reason": ""})
+        elif isinstance(item, dict) and "cluster_id" in item:
+            normalised_links.append(item)
+
+    persisted_links = []
+    for link in normalised_links:
+        other_id = int(link["cluster_id"])
+        reason = link.get("reason", "")
+        other_cluster = get_cluster_by_id(other_id)
+        if other_cluster is None:
+            continue  # stale ID from Claude — skip silently
+        save_cluster_link(cluster_id, other_id, reason)
+        persisted_links.append({
+            "name": other_cluster["name"],
+            "reason": reason,
+        })
+
+    # ── Build Telegram reply ─────────────────────────────────────────────────
+    reply = _build_reply(result, scores, persisted_links)
+    return reply
+
+
+def _build_reply(result: dict, scores: dict, persisted_links: list[dict]) -> str:
+    """
+    Compose the Telegram reply message. Cross-links are shown prominently
+    with their reasons so they feel like a useful insight, not a footnote.
+    """
+    lines = [
         f"✓ *{result['cluster_name']}*",
         f"_{result['confirmation_note']}_",
-        f"",
+        "",
         f"Score: *{scores['total']}/100* · Entries: {scores['entry_count']}",
     ]
 
-    if cross_links:
-        linked_names = [c["name"] for c in active_clusters if c["id"] in cross_links]
-        if linked_names:
-            reply_lines.append(f"Connects to: {', '.join(linked_names)}")
+    if persisted_links:
+        lines.append("")
+        if len(persisted_links) == 1:
+            lines.append("🔗 *Connects to 1 existing idea:*")
+        else:
+            lines.append(f"🔗 *Connects to {len(persisted_links)} existing ideas:*")
+
+        for link in persisted_links:
+            name = link["name"]
+            reason = link["reason"]
+            if reason:
+                lines.append(f"  • *{name}* — _{reason}_")
+            else:
+                lines.append(f"  • *{name}*")
 
     tags_str = " ".join(f"`{t}`" for t in result["tags"])
-    reply_lines.append(f"Tags: {tags_str}")
+    lines.append("")
+    lines.append(f"Tags: {tags_str}")
 
-    return "\n".join(reply_lines)
+    return "\n".join(lines)
