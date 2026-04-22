@@ -1,9 +1,13 @@
 import io
+import os
 import logging
 from openai import AsyncOpenAI, APIError
 
 logger = logging.getLogger(__name__)
-openai_client = AsyncOpenAI()  # reads OPENAI_API_KEY from environment automatically
+
+
+def _get_client() -> AsyncOpenAI:
+    return AsyncOpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
 
 async def transcribe_voice(file_bytes: bytes, mime_type: str = "audio/ogg") -> str | None:
@@ -22,7 +26,7 @@ async def transcribe_voice(file_bytes: bytes, mime_type: str = "audio/ogg") -> s
         audio_file = io.BytesIO(file_bytes)
         audio_file.name = "voice.ogg"  # Whisper needs a filename to infer format
 
-        transcript = await openai_client.audio.transcriptions.create(
+        transcript = await _get_client().audio.transcriptions.create(
             model="whisper-1",
             file=audio_file,
             language="en",
