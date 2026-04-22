@@ -23,6 +23,12 @@ async def transcribe_voice(file_bytes: bytes, mime_type: str = "audio/ogg") -> s
         Transcribed string, or None on failure.
     """
     try:
+        if not file_bytes or len(file_bytes) < 100:
+            logger.error(f"Audio file too small to transcribe: {len(file_bytes) if file_bytes else 0} bytes")
+            return None
+
+        logger.info(f"Sending {len(file_bytes)} bytes to Whisper...")
+
         audio_file = io.BytesIO(file_bytes)
         audio_file.name = "voice.ogg"  # Whisper needs a filename to infer format
 
@@ -38,7 +44,7 @@ async def transcribe_voice(file_bytes: bytes, mime_type: str = "audio/ogg") -> s
             logger.warning("Whisper returned an empty transcription.")
             return None
 
-        logger.info(f"Whisper transcribed {len(file_bytes)} bytes → {len(text)} chars")
+        logger.info(f"Whisper transcribed {len(file_bytes)} bytes → {len(text)} chars: '{text[:80]}'")
         return text
 
     except APIError as e:
