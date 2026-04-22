@@ -290,13 +290,32 @@ def get_all_scores() -> list[dict]:
     with get_conn() as conn:
         rows = conn.execute(
             """
-            SELECT s.*, c.name
+            SELECT s.*, c.name, c.summary, c.tags
             FROM scores s
             JOIN clusters c ON c.id = s.cluster_id
             ORDER BY s.total DESC
             """
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+def get_top_clusters(n: int = 5) -> list[dict]:
+    """
+    Return the top N clusters by total score, shaped for digest.py.
+    Kept for backwards compatibility — wraps get_all_scores().
+    """
+    rows = get_all_scores()[:n]
+    return [
+        {
+            "id": r["cluster_id"],
+            "name": r["name"],
+            "summary": r["summary"],
+            "tags": json.loads(r["tags"]) if isinstance(r["tags"], str) else r["tags"],
+            "score": round(r["total"]),
+            "entry_count": r["entry_count"],
+        }
+        for r in rows
+    ]
 
 
 # ─── Fallback ────────────────────────────────────────────────────────────────
