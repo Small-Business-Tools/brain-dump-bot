@@ -15,6 +15,7 @@ from claude_client import process_idea
 from store import init_db
 from digest import send_digest
 from transcriber import transcribe_voice
+import dashboard                          # ← NEW LINE 1
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -202,6 +203,7 @@ async def run():
     tg_app.add_handler(MessageHandler(filters.VOICE, handle_voice))
 
     web_app = web.Application()
+    dashboard.setup_routes(web_app)       # ← NEW LINE 2
     web_app.router.add_post("/idea", handle_webhook)
     runner = web.AppRunner(web_app)
     await runner.setup()
