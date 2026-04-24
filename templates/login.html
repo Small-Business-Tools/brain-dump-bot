@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -100,7 +99,7 @@
     </div>
     <div class="subtitle">Enter token to access the dashboard</div>
 
-    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+    {{ error_block }}
 
     <label class="form-label" for="token">Access token</label>
     <input type="password" id="token" name="token" autofocus autocomplete="off" />
