@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13,6 +12,7 @@
       --silver:#C4C6C8;--chrome:#D8DADB;
       --white:#F0ECE6;--white2:#D4D0CA;--white3:#B8B4AE;
       --score-gold:#F0A020;
+      --sidebar-w:190px;
     }
     html,body{height:100%;}
     body{
@@ -23,11 +23,12 @@
     }
     .dash{display:flex;height:100vh;}
 
-    /* Sidebar */
-    .sidebar{width:190px;background:var(--blk);border-right:1px solid #2A2A2A;display:flex;flex-direction:column;flex-shrink:0;}
-    .sidebar-head{padding:18px 16px 14px;border-bottom:1px solid #2A2A2A;}
+    /* ── Sidebar ── */
+    .sidebar{width:var(--sidebar-w);background:var(--blk);border-right:1px solid #2A2A2A;display:flex;flex-direction:column;flex-shrink:0;z-index:100;}
+    .sidebar-head{padding:18px 16px 14px;border-bottom:1px solid #2A2A2A;display:flex;align-items:center;justify-content:space-between;}
     .logo{font-size:13px;font-weight:500;color:var(--white);display:flex;align-items:center;gap:9px;letter-spacing:0.03em;}
     .logo-bar{width:3px;height:16px;background:var(--red2);border-radius:1px;}
+    .sidebar-close{display:none;background:none;border:none;color:var(--white3);font-size:22px;cursor:pointer;padding:4px;}
     .sidebar-section{padding:10px 8px;}
     .sidebar-label{font-size:9px;font-weight:500;color:var(--white3);text-transform:uppercase;letter-spacing:0.1em;padding:0 8px;margin-bottom:5px;}
     .nav-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;cursor:pointer;font-size:12px;color:var(--white3);transition:all 0.1s;}
@@ -37,13 +38,16 @@
     .sidebar-footer{margin-top:auto;padding:12px 16px;border-top:1px solid #222;font-size:10px;color:var(--white3);display:flex;justify-content:space-between;align-items:center;}
     .logout-link{color:var(--white3);text-decoration:none;font-size:10px;}
     .logout-link:hover{color:var(--red2);}
+    .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:90;}
 
-    /* Main panel */
+    /* ── Main ── */
     .main{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--blk2);}
-    .topbar{padding:0 18px;border-bottom:1px solid #2A2A2A;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--blk);height:46px;}
-    .topbar-title{font-size:14px;font-weight:500;}
-    .tab-row{display:flex;gap:2px;height:100%;}
-    .tab{font-size:11px;color:var(--white3);padding:0 14px;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.1s;display:flex;align-items:center;letter-spacing:0.03em;}
+    .topbar{padding:0 18px;border-bottom:1px solid #2A2A2A;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--blk);height:46px;gap:10px;}
+    .topbar-left{display:flex;align-items:center;gap:10px;}
+    .hamburger{display:none;background:none;border:none;color:var(--white);font-size:20px;cursor:pointer;padding:4px 6px;}
+    .topbar-title{font-size:14px;font-weight:500;white-space:nowrap;}
+    .tab-row{display:flex;gap:2px;height:100%;flex-shrink:0;}
+    .tab{font-size:11px;color:var(--white3);padding:0 14px;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.1s;display:flex;align-items:center;letter-spacing:0.03em;white-space:nowrap;}
     .tab:hover{color:var(--white);}
     .tab.active{color:var(--red2);border-bottom-color:var(--red2);}
 
@@ -53,11 +57,11 @@
     .stat-value{font-size:20px;font-weight:500;color:var(--white);}
     .stat-value.red{color:var(--red2);}
     .stat-value.gold{color:var(--score-gold);}
-    .stat-sub{font-size:10px;color:var(--white3);margin-top:2px;}
+    .stat-sub{font-size:10px;color:var(--white3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
-    .content{flex:1;display:flex;overflow:hidden;}
+    .content{flex:1;display:flex;overflow:hidden;position:relative;}
 
-    /* Ideas list */
+    /* ── Ideas list ── */
     .ideas-list{width:340px;border-right:1px solid #2A2A2A;overflow-y:auto;flex-shrink:0;}
     .idea-item{padding:12px 14px;border-bottom:1px solid #202020;cursor:pointer;transition:background 0.1s;}
     .idea-item:hover{background:var(--blk3);}
@@ -77,8 +81,9 @@
     .tag{font-size:9px;color:var(--white3);background:#1E1E1E;padding:2px 5px;border-radius:3px;}
     .idea-snippet{font-size:11px;color:var(--white3);margin-top:5px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 
-    /* Detail pane */
+    /* ── Detail pane ── */
     .detail-pane{flex:1;overflow-y:auto;padding:18px;min-width:0;background:var(--blk2);}
+    .detail-back{display:none;background:none;border:none;color:var(--red2);font-size:12px;cursor:pointer;padding:4px 0;margin-bottom:12px;font-family:inherit;}
     .detail-title{font-size:15px;font-weight:500;color:var(--white);line-height:1.4;margin-bottom:8px;}
     .detail-summary{font-size:12px;color:var(--white3);margin-bottom:12px;line-height:1.6;}
     .detail-badges{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:16px;}
@@ -110,11 +115,10 @@
     .link-strength{font-size:9px;color:var(--white3);background:#1E1E1E;padding:2px 6px;border-radius:10px;}
     .link-arrow{color:var(--red2);font-size:12px;}
 
-    /* Empty / loading states */
     .empty-detail,.loading{display:flex;align-items:center;justify-content:center;height:100%;color:var(--white3);font-size:12px;text-align:center;padding:20px;}
     .empty-section{font-size:11px;color:var(--white3);padding:8px 10px;background:var(--blk3);border-radius:5px;font-style:italic;}
 
-    /* Connections view */
+    /* ── Connections view ── */
     .connections-grid{padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;overflow-y:auto;align-content:start;width:100%;}
     .conn-card{background:var(--blk3);border:1px solid #2C2C2C;border-radius:8px;padding:12px;cursor:pointer;transition:all 0.15s;position:relative;overflow:hidden;}
     .conn-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--red2),transparent);}
@@ -128,20 +132,117 @@
     .conn-stat-val.red{color:var(--red2);}
     .conn-stat-label{font-size:8px;color:var(--white3);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;}
 
-    /* Scrollbar */
+    /* ── FAB + Capture Modal ── */
+    .fab{
+      position:fixed;bottom:24px;right:24px;
+      width:52px;height:52px;border-radius:50%;
+      background:var(--red2);color:var(--white);
+      border:none;font-size:26px;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 4px 16px rgba(0,0,0,0.4);
+      z-index:80;transition:transform 0.15s,background 0.15s;
+      font-family:inherit;line-height:1;
+    }
+    .fab:hover{background:var(--red);transform:scale(1.05);}
+    .fab:active{transform:scale(0.95);}
+
+    .modal-overlay{
+      display:none;position:fixed;inset:0;
+      background:rgba(0,0,0,0.7);z-index:200;
+      align-items:center;justify-content:center;padding:20px;
+    }
+    .modal-overlay.open{display:flex;}
+    .modal{
+      background:var(--blk2);border:1px solid #2A2A2A;border-radius:10px;
+      width:100%;max-width:480px;position:relative;overflow:hidden;
+    }
+    .modal::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--red2),transparent);}
+    .modal-head{padding:16px 18px 12px;display:flex;align-items:center;justify-content:space-between;}
+    .modal-title{font-size:14px;font-weight:500;}
+    .modal-close{background:none;border:none;color:var(--white3);font-size:20px;cursor:pointer;padding:2px 6px;}
+    .modal-close:hover{color:var(--white);}
+    .modal-body{padding:0 18px 18px;}
+    .modal-body textarea{
+      width:100%;height:120px;
+      background:var(--blk3);border:1px solid var(--blk4);border-radius:6px;
+      color:var(--white);font-size:13px;font-family:inherit;
+      padding:10px 12px;resize:vertical;outline:none;
+      transition:border-color 0.15s;line-height:1.6;
+    }
+    .modal-body textarea:focus{border-color:var(--red2);}
+    .modal-body textarea::placeholder{color:var(--white3);}
+    .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px;}
+    .btn{
+      padding:8px 16px;border-radius:5px;font-size:12px;font-weight:500;
+      cursor:pointer;font-family:inherit;letter-spacing:0.03em;border:none;
+      transition:all 0.15s;
+    }
+    .btn-ghost{background:none;color:var(--white3);}
+    .btn-ghost:hover{color:var(--white);}
+    .btn-primary{background:var(--red2);color:var(--white);}
+    .btn-primary:hover{background:var(--red);}
+    .btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
+    .modal-status{font-size:11px;color:var(--white3);margin-top:10px;line-height:1.5;}
+    .modal-status.error{color:#FF8080;}
+    .modal-status.success{color:#60C060;}
+
+    /* ── Scrollbar ── */
     ::-webkit-scrollbar{width:6px;height:6px;}
     ::-webkit-scrollbar-track{background:var(--blk);}
     ::-webkit-scrollbar-thumb{background:var(--blk4);border-radius:3px;}
     ::-webkit-scrollbar-thumb:hover{background:#3A3A3A;}
+
+    /* ── Mobile ── */
+    @media (max-width: 768px) {
+      .sidebar{
+        position:fixed;top:0;left:0;bottom:0;
+        width:260px;
+        transform:translateX(-100%);
+        transition:transform 0.25s ease;
+        border-right:1px solid #2A2A2A;
+      }
+      .sidebar.open{transform:translateX(0);}
+      .sidebar-close{display:block;}
+      .overlay.open{display:block;}
+      .hamburger{display:block;}
+      .topbar{padding:0 12px;height:44px;}
+      .stats-row{grid-template-columns:repeat(4,1fr);overflow-x:auto;display:flex;gap:0;}
+      .stat-card{min-width:120px;flex-shrink:0;padding:10px 12px;border-right:1px solid #2A2A2A;}
+      .stat-card:last-child{border-right:none;}
+      .stat-value{font-size:18px;}
+      .ideas-list{width:100%;border-right:none;}
+      .detail-pane{
+        position:absolute;top:0;left:0;right:0;bottom:0;
+        transform:translateX(100%);
+        transition:transform 0.25s ease;
+        z-index:10;
+      }
+      .detail-pane.visible{transform:translateX(0);}
+      .detail-back{display:block;}
+      .connections-grid{grid-template-columns:1fr;padding:12px;}
+      .fab{bottom:20px;right:16px;width:48px;height:48px;font-size:24px;}
+    }
+
+    @media (max-width: 380px) {
+      .stat-card{min-width:100px;padding:8px 10px;}
+      .stat-value{font-size:16px;}
+      .stat-label{font-size:9px;}
+      .topbar-title{font-size:13px;}
+      .tab{font-size:10px;padding:0 10px;}
+    }
   </style>
 </head>
 <body>
 <div class="dash">
 
+  <!-- Overlay for mobile sidebar -->
+  <div class="overlay" id="sidebarOverlay"></div>
+
   <!-- Sidebar -->
-  <div class="sidebar">
+  <div class="sidebar" id="sidebar">
     <div class="sidebar-head">
       <div class="logo"><div class="logo-bar"></div>NEIL'S BRAIN</div>
+      <button class="sidebar-close" id="sidebarClose">✕</button>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-label">Views</div>
@@ -156,7 +257,7 @@
       <div class="nav-item" data-filter="all">↺ Clear filter</div>
     </div>
     <div class="sidebar-footer">
-      <span id="footerInfo">v0.1</span>
+      <span id="footerInfo">v0.2</span>
       <a href="/logout" class="logout-link">Logout</a>
     </div>
   </div>
@@ -164,7 +265,10 @@
   <!-- Main -->
   <div class="main">
     <div class="topbar">
-      <div class="topbar-title" id="mainTitle">All Ideas</div>
+      <div class="topbar-left">
+        <button class="hamburger" id="hamburger">☰</button>
+        <div class="topbar-title" id="mainTitle">All Ideas</div>
+      </div>
       <div class="tab-row">
         <div class="tab active" data-tab="list">List</div>
         <div class="tab" data-tab="connections">Connections</div>
@@ -172,10 +276,10 @@
     </div>
 
     <div class="stats-row">
-      <div class="stat-card"><div class="stat-label">Total ideas</div><div class="stat-value" id="statTotal">—</div><div class="stat-sub" id="statTotalSub">&nbsp;</div></div>
+      <div class="stat-card"><div class="stat-label">Ideas</div><div class="stat-value" id="statTotal">—</div><div class="stat-sub" id="statTotalSub">&nbsp;</div></div>
       <div class="stat-card"><div class="stat-label">Entries</div><div class="stat-value" id="statEntries">—</div><div class="stat-sub" id="statEntriesSub">&nbsp;</div></div>
       <div class="stat-card"><div class="stat-label">Top score</div><div class="stat-value gold" id="statTop">—</div><div class="stat-sub" id="statTopSub">&nbsp;</div></div>
-      <div class="stat-card"><div class="stat-label">Build pipeline</div><div class="stat-value red" id="statBuild">—</div><div class="stat-sub">ready to act on</div></div>
+      <div class="stat-card"><div class="stat-label">Build</div><div class="stat-value red" id="statBuild">—</div><div class="stat-sub">ready to act on</div></div>
     </div>
 
     <div class="content" id="listView">
@@ -189,64 +293,86 @@
   </div>
 </div>
 
+<!-- FAB -->
+<button class="fab" id="fabBtn" title="Capture an idea">+</button>
+
+<!-- Capture Modal -->
+<div class="modal-overlay" id="captureModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Capture an idea</div>
+      <button class="modal-close" id="modalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <textarea id="captureText" placeholder="Type your idea here…"></textarea>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="captureCancel">Cancel</button>
+        <button class="btn btn-primary" id="captureSubmit">Send</button>
+      </div>
+      <div class="modal-status" id="captureStatus"></div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ─── State ──────────────────────────────────────────────────────────────────
-const state = {
-  ideas: [],
-  filtered: [],
-  selectedId: null,
-  filter: "all",
-};
-
+const state = { ideas: [], filtered: [], selectedId: null, filter: "all" };
 const stageLabel = {raw:"Raw",refined:"Refined",validated:"Validated",build:"Build"};
-const stageCls   = {raw:"stage-raw",refined:"stage-refined",validated:"stage-validated",build:"stage-build"};
-
+const stageCls = {raw:"stage-raw",refined:"stage-refined",validated:"stage-validated",build:"stage-build"};
 function scoreClass(s){ return s >= 75 ? "score-high" : s >= 60 ? "score-mid" : "score-low"; }
+function isMobile(){ return window.innerWidth <= 768; }
 
 function escapeHtml(s){
   if (s == null) return "";
-  return String(s)
-    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
     .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 }
-
 function formatDate(iso){
   if (!iso) return "";
   try {
     const d = new Date(iso);
     if (isNaN(d)) return iso;
-    return d.toLocaleDateString("en-GB", {day:"numeric", month:"short", year:"numeric"}) +
-           " · " + d.toLocaleTimeString("en-GB", {hour:"2-digit", minute:"2-digit"});
+    return d.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})
+      + " · " + d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
   } catch { return iso; }
 }
 
 // ─── API ────────────────────────────────────────────────────────────────────
 async function apiGet(path){
-  const r = await fetch(path, {credentials:"same-origin"});
-  if (r.status === 401) { window.location = "/login"; return null; }
+  const r = await fetch(path,{credentials:"same-origin"});
+  if (r.status===401){window.location="/login";return null;}
   if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
   return r.json();
 }
 
-// ─── Rendering: stats ───────────────────────────────────────────────────────
+// ─── Sidebar (mobile) ─────────────────────────────────────────────────────
+const sidebar = document.getElementById("sidebar");
+const sidebarOverlay = document.getElementById("sidebarOverlay");
+function openSidebar(){ sidebar.classList.add("open"); sidebarOverlay.classList.add("open"); }
+function closeSidebar(){ sidebar.classList.remove("open"); sidebarOverlay.classList.remove("open"); }
+document.getElementById("hamburger").addEventListener("click", openSidebar);
+document.getElementById("sidebarClose").addEventListener("click", closeSidebar);
+sidebarOverlay.addEventListener("click", closeSidebar);
+
+// ─── Stats ──────────────────────────────────────────────────────────────────
 function renderStats(s){
-  document.getElementById("statTotal").textContent    = s.total_clusters;
+  document.getElementById("statTotal").textContent = s.total_clusters;
   document.getElementById("statTotalSub").textContent = s.high_density_clusters + " high density";
-  document.getElementById("statEntries").textContent  = s.total_entries;
+  document.getElementById("statEntries").textContent = s.total_entries;
   document.getElementById("statEntriesSub").textContent = "+" + s.new_this_week + " this week";
-  document.getElementById("statTop").textContent      = s.top_score;
-  document.getElementById("statTopSub").textContent   = s.top_score_name;
-  document.getElementById("statBuild").textContent    = s.build_count;
-  document.getElementById("navCount").textContent     = s.total_clusters;
+  document.getElementById("statTop").textContent = s.top_score;
+  document.getElementById("statTopSub").textContent = s.top_score_name;
+  document.getElementById("statBuild").textContent = s.build_count;
+  document.getElementById("navCount").textContent = s.total_clusters;
 }
 
-// ─── Rendering: idea list ──────────────────────────────────────────────────
+// ─── Idea list ──────────────────────────────────────────────────────────────
 function applyFilter(){
   const f = state.filter;
-  if (f === "all") state.filtered = state.ideas;
-  else if (f === "top") state.filtered = state.ideas.filter(i => i.score >= 70);
-  else if (f === "revenue") state.filtered = [...state.ideas].sort((a,b) => b.scores.revenue_fit - a.scores.revenue_fit);
-  else if (f === "build") state.filtered = state.ideas.filter(i => i.stage === "build");
+  if (f==="all") state.filtered = state.ideas;
+  else if (f==="top") state.filtered = state.ideas.filter(i=>i.score>=70);
+  else if (f==="revenue") state.filtered = [...state.ideas].sort((a,b)=>b.scores.revenue_fit-a.scores.revenue_fit);
+  else if (f==="build") state.filtered = state.ideas.filter(i=>i.stage==="build");
   else state.filtered = state.ideas;
 }
 
@@ -256,31 +382,31 @@ function renderList(){
     el.innerHTML = '<div class="loading">No ideas match this filter.</div>';
     return;
   }
-  el.innerHTML = state.filtered.map(i => `
-    <div class="idea-item ${i.id === state.selectedId ? 'selected' : ''}" data-id="${i.id}">
+  el.innerHTML = state.filtered.map(i=>`
+    <div class="idea-item ${i.id===state.selectedId?'selected':''}" data-id="${i.id}">
       <div class="idea-top">
         <div class="idea-title">${escapeHtml(i.name)}</div>
         <div class="score-pill ${scoreClass(i.score)}">${i.score}</div>
       </div>
       <div class="idea-meta">
         <span class="stage-badge ${stageCls[i.stage]}">${stageLabel[i.stage]}</span>
-        ${(i.tags || []).slice(0,3).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join("")}
+        ${(i.tags||[]).slice(0,3).map(t=>`<span class="tag">${escapeHtml(t)}</span>`).join("")}
       </div>
-      <div class="idea-snippet">${escapeHtml(i.summary || "")}</div>
+      <div class="idea-snippet">${escapeHtml(i.summary||"")}</div>
     </div>
   `).join("");
-
-  el.querySelectorAll(".idea-item").forEach(node => {
-    node.addEventListener("click", () => selectIdea(parseInt(node.dataset.id, 10)));
+  el.querySelectorAll(".idea-item").forEach(node=>{
+    node.addEventListener("click",()=>selectIdea(parseInt(node.dataset.id,10)));
   });
 }
 
-// ─── Rendering: detail pane ────────────────────────────────────────────────
+// ─── Detail pane ────────────────────────────────────────────────────────────
 async function selectIdea(id){
   state.selectedId = id;
   renderList();
   const pane = document.getElementById("detailPane");
   pane.innerHTML = '<div class="loading">Loading…</div>';
+  if (isMobile()) pane.classList.add("visible");
   try {
     const d = await apiGet(`/api/clusters/${id}`);
     if (!d) return;
@@ -290,18 +416,24 @@ async function selectIdea(id){
   }
 }
 
+function hideDetail(){
+  document.getElementById("detailPane").classList.remove("visible");
+  state.selectedId = null;
+  renderList();
+}
+
 function renderDetail(d){
   const pane = document.getElementById("detailPane");
   const s = d.scores;
   pane.innerHTML = `
+    <button class="detail-back" onclick="hideDetail()">← Back to list</button>
     <div class="detail-title">${escapeHtml(d.name)}</div>
-    <div class="detail-summary">${escapeHtml(d.summary || "")}</div>
+    <div class="detail-summary">${escapeHtml(d.summary||"")}</div>
     <div class="detail-badges">
       <span class="stage-badge ${stageCls[d.stage]}">${stageLabel[d.stage]}</span>
-      ${(d.tags || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join("")}
+      ${(d.tags||[]).map(t=>`<span class="tag">${escapeHtml(t)}</span>`).join("")}
       <span class="score-pill ${scoreClass(s.total)}" style="font-size:10px;">Score: ${s.total}</span>
     </div>
-
     <div class="detail-section">
       <div class="section-label">Score breakdown</div>
       <div class="score-bars">
@@ -311,24 +443,22 @@ function renderDetail(d){
         <div class="score-row"><div class="score-row-label">Novelty</div><div class="score-bar-track"><div class="score-bar-fill bar-novelty" style="width:${s.novelty}%"></div></div><div class="score-row-val">${s.novelty}</div></div>
       </div>
     </div>
-
     <div class="detail-section">
       <div class="section-label">Entries (${d.entries.length})</div>
       ${d.entries.length
-        ? `<div class="entries-list">${d.entries.map(e => `
+        ? `<div class="entries-list">${d.entries.map(e=>`
             <div class="entry-item">${escapeHtml(e.text)}<div class="entry-date">${formatDate(e.created_at)}</div></div>
           `).join("")}</div>`
         : `<div class="empty-section">No entries yet.</div>`}
     </div>
-
     <div class="detail-section">
       <div class="section-label">Linked clusters</div>
       ${d.links.length
-        ? `<div class="links-list">${d.links.map(l => `
+        ? `<div class="links-list">${d.links.map(l=>`
             <div class="link-item" data-id="${l.cluster_id}">
               <div class="link-info">
                 <div class="link-name">${escapeHtml(l.name)}</div>
-                <div class="link-reason">${escapeHtml(l.reason || "No reason recorded")}</div>
+                <div class="link-reason">${escapeHtml(l.reason||"No reason recorded")}</div>
               </div>
               <div class="link-right">
                 <span class="link-strength">×${l.strength}</span>
@@ -338,29 +468,25 @@ function renderDetail(d){
         : `<div class="empty-section">No linked clusters yet.</div>`}
     </div>
   `;
-
-  pane.querySelectorAll(".link-item").forEach(n => {
-    n.addEventListener("click", () => {
+  pane.querySelectorAll(".link-item").forEach(n=>{
+    n.addEventListener("click",()=>{
       switchTab("list");
-      selectIdea(parseInt(n.dataset.id, 10));
+      selectIdea(parseInt(n.dataset.id,10));
     });
   });
 }
 
-// ─── Rendering: connections view ───────────────────────────────────────────
+// ─── Connections view ──────────────────────────────────────────────────────
 async function renderConnections(){
   const el = document.getElementById("connectionsGrid");
-  el.innerHTML = '<div class="loading">Loading connections…</div>';
-
   if (!state.ideas.length){
     el.innerHTML = '<div class="loading">No ideas to show.</div>';
     return;
   }
-
-  el.innerHTML = state.ideas.map(i => `
+  el.innerHTML = state.ideas.map(i=>`
     <div class="conn-card" data-id="${i.id}">
       <div class="conn-name">${escapeHtml(i.name)}</div>
-      <div class="conn-summary">${escapeHtml(i.summary || "")}</div>
+      <div class="conn-summary">${escapeHtml(i.summary||"")}</div>
       <div class="conn-meta">
         <div class="conn-stat"><div class="conn-stat-val">${i.entry_count}</div><div class="conn-stat-label">entries</div></div>
         <div class="conn-stat"><div class="conn-stat-val gold">${i.score}</div><div class="conn-stat-label">score</div></div>
@@ -368,35 +494,113 @@ async function renderConnections(){
       </div>
     </div>
   `).join("");
-
-  el.querySelectorAll(".conn-card").forEach(n => {
-    n.addEventListener("click", () => {
+  el.querySelectorAll(".conn-card").forEach(n=>{
+    n.addEventListener("click",()=>{
       switchTab("list");
-      selectIdea(parseInt(n.dataset.id, 10));
+      selectIdea(parseInt(n.dataset.id,10));
     });
   });
 }
 
 // ─── Tab switching ─────────────────────────────────────────────────────────
 function switchTab(tab){
-  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
-  document.getElementById("listView").style.display        = tab === "list" ? "flex" : "none";
-  document.getElementById("connectionsView").style.display = tab === "connections" ? "flex" : "none";
-  document.getElementById("mainTitle").textContent         = tab === "connections" ? "Connections" : "All Ideas";
-  if (tab === "connections") renderConnections();
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===tab));
+  document.getElementById("listView").style.display = tab==="list" ? "flex" : "none";
+  document.getElementById("connectionsView").style.display = tab==="connections" ? "flex" : "none";
+  document.getElementById("mainTitle").textContent = tab==="connections" ? "Connections" : "All Ideas";
+  if (tab==="connections") renderConnections();
 }
-
-document.querySelectorAll(".tab").forEach(t => {
-  t.addEventListener("click", () => switchTab(t.dataset.tab));
+document.querySelectorAll(".tab").forEach(t=>{
+  t.addEventListener("click",()=>switchTab(t.dataset.tab));
 });
 
-// ─── Filter buttons ────────────────────────────────────────────────────────
-document.querySelectorAll(".nav-item[data-filter]").forEach(n => {
-  n.addEventListener("click", () => {
+// ─── Sidebar nav + filters ─────────────────────────────────────────────────
+document.querySelectorAll(".nav-item[data-filter]").forEach(n=>{
+  n.addEventListener("click",()=>{
     state.filter = n.dataset.filter;
     applyFilter();
     renderList();
+    closeSidebar();
   });
+});
+document.querySelectorAll(".nav-item[data-view]").forEach(n=>{
+  n.addEventListener("click",()=>{
+    document.querySelectorAll(".nav-item[data-view]").forEach(x=>x.classList.remove("active"));
+    n.classList.add("active");
+    if (n.dataset.view==="connections") switchTab("connections");
+    else switchTab("list");
+    closeSidebar();
+  });
+});
+
+// ─── Capture modal ─────────────────────────────────────────────────────────
+const captureModal = document.getElementById("captureModal");
+const captureText = document.getElementById("captureText");
+const captureSubmit = document.getElementById("captureSubmit");
+const captureStatus = document.getElementById("captureStatus");
+
+function openCapture(){
+  captureModal.classList.add("open");
+  captureText.value = "";
+  captureStatus.textContent = "";
+  captureStatus.className = "modal-status";
+  captureSubmit.disabled = false;
+  setTimeout(()=>captureText.focus(), 100);
+}
+function closeCapture(){ captureModal.classList.remove("open"); }
+
+document.getElementById("fabBtn").addEventListener("click", openCapture);
+document.getElementById("modalClose").addEventListener("click", closeCapture);
+document.getElementById("captureCancel").addEventListener("click", closeCapture);
+captureModal.addEventListener("click",(e)=>{
+  if (e.target === captureModal) closeCapture();
+});
+
+captureSubmit.addEventListener("click", async ()=>{
+  const text = captureText.value.trim();
+  if (!text) return;
+  captureSubmit.disabled = true;
+  captureStatus.textContent = "Processing…";
+  captureStatus.className = "modal-status";
+  try {
+    const r = await fetch("/api/capture", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      credentials:"same-origin",
+      body:JSON.stringify({idea: text}),
+    });
+    const data = await r.json();
+    if (data.ok) {
+      captureStatus.textContent = "Idea captured and processed.";
+      captureStatus.className = "modal-status success";
+      captureText.value = "";
+      // Refresh the dashboard data
+      const [stats, ideas] = await Promise.all([apiGet("/api/stats"), apiGet("/api/clusters")]);
+      if (stats && ideas) {
+        renderStats(stats);
+        state.ideas = ideas;
+        applyFilter();
+        renderList();
+      }
+      setTimeout(closeCapture, 1500);
+    } else {
+      captureStatus.textContent = data.error || "Something went wrong.";
+      captureStatus.className = "modal-status error";
+      captureSubmit.disabled = false;
+    }
+  } catch (e) {
+    captureStatus.textContent = "Network error — try again.";
+    captureStatus.className = "modal-status error";
+    captureSubmit.disabled = false;
+  }
+});
+
+// Allow Ctrl+Enter / Cmd+Enter to submit
+captureText.addEventListener("keydown",(e)=>{
+  if (e.key==="Enter" && (e.metaKey||e.ctrlKey)){
+    e.preventDefault();
+    captureSubmit.click();
+  }
 });
 
 // ─── Boot ──────────────────────────────────────────────────────────────────
@@ -411,9 +615,9 @@ async function boot(){
     state.ideas = ideas;
     applyFilter();
     renderList();
-    if (ideas.length) selectIdea(ideas[0].id);
-    else document.getElementById("detailPane").innerHTML =
-         '<div class="empty-detail">No ideas captured yet — send one to the bot to get started.</div>';
+    if (ideas.length && !isMobile()) selectIdea(ideas[0].id);
+    else if (!ideas.length) document.getElementById("detailPane").innerHTML =
+      '<div class="empty-detail">No ideas captured yet — tap + to get started.</div>';
   } catch (e) {
     document.getElementById("ideaList").innerHTML =
       `<div class="loading">Failed to load: ${escapeHtml(e.message)}</div>`;
