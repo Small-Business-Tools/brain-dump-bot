@@ -25,6 +25,7 @@ from pathlib import Path
 from aiohttp import web
 
 import store
+from claude_client import process_idea
 
 
 DASHBOARD_TOKEN = os.environ.get("DASHBOARD_TOKEN", "")
@@ -282,6 +283,30 @@ async def api_cluster_detail(request: web.Request) -> web.Response:
     })
 
 
+# ─── Capture ────────────────────────────────────────────────────────────────
+
+@require_auth
+async def api_capture(request: web.Request) -> web.Response:
+    """Accept an idea submitted from the dashboard and process it."""
+    try:
+        data = await request.json()
+        idea_text = data.get("idea", "").strip()
+    except Exception:
+        return web.json_response({"error": "invalid JSON"}, status=400)
+
+    if not idea_text:
+        return web.json_response({"error": "no idea text"}, status=400)
+
+    try:
+        reply = await process_idea(idea_text)
+        return web.json_response({"ok": True, "reply": reply})
+    except Exception as e:
+        return web.json_response(
+            {"ok": False, "error": str(e)},
+            status=500,
+        )
+
+
 # ─── Integration point ──────────────────────────────────────────────────────
 
 def setup_routes(web_app: web.Application) -> None:
@@ -302,3 +327,4 @@ def setup_routes(web_app: web.Application) -> None:
     web_app.router.add_get("/api/stats", api_stats)
     web_app.router.add_get("/api/clusters", api_clusters)
     web_app.router.add_get("/api/clusters/{cluster_id}", api_cluster_detail)
+    web_app.router.add_post("/api/capture", api_capture)
